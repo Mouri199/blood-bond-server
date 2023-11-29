@@ -35,7 +35,6 @@ async function run() {
         const userCollection = client.db('bloodBondDB').collection('users')
         const donorRequ = client.db('bloodBondDB').collection('bloodDonor')
         const createDonor = client.db('bloodBondDB').collection('createDonor')
-        const blogPage = client.db('bloodBondDB').collection('blogPage')
 
 
 
@@ -73,6 +72,18 @@ async function run() {
             }
             next();
         }
+        const verifyVoluenteer = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isVoluenteer = user?.role === 'Voluenteer';
+            if (!isVoluenteer) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+        }
+
+
 
         app.get('/reviews', async (req, res) => {
             const cursor = review.find()
@@ -128,6 +139,40 @@ async function run() {
             res.send(result);
         })
 
+        app.patch('/users/voluenteer/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'voluenteer'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+        app.patch('/users/active/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    status: 'active'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+        app.patch('/users/blocked/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    status: 'blocked'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
 
 
         app.get('/users/admin/:email', verifyToken, async (req, res) => {
@@ -145,6 +190,21 @@ async function run() {
             }
             res.send({ admin });
         })
+        app.get('/users/voluenteer/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let voluenteer = false;
+            if (user) {
+                voluenteer = user?.role === 'voluenteer';
+            }
+            res.send({ voluenteer });
+        })
 
         app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             console.log(req.headers);
@@ -152,12 +212,29 @@ async function run() {
             const result = await cursor.toArray()
             res.send(result)
         })
-        app.get('/profile',  async (req, res) => {
+        app.get('/profile', async (req, res) => {
             console.log(req.headers);
             const cursor = userCollection.find()
             const result = await cursor.toArray()
             res.send(result)
         })
+
+        app.put("/blogsUpdate/:id", async (req, res) => {
+            const id = req.params.id;
+            const body = req.body;
+            console.log(body);
+            const filter = { _id: new ObjectId(id) };
+            const updateblog = {
+                $set: {
+                    img: body.img,
+                    title: body.title,
+                    content: body.content
+                },
+            };
+            const result = await blog.updateOne(filter, updateblog);
+            res.send(result);
+        });
+
 
         app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
@@ -165,6 +242,13 @@ async function run() {
             const result = await userCollection.deleteOne(query)
             res.send(result)
         })
+        app.delete('/blogs/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await blog.deleteOne(query)
+            res.send(result)
+        })
+
 
         app.post('/users', async (req, res) => {
             const user = req.body;
@@ -183,7 +267,7 @@ async function run() {
             const result = await blog.findOne(query)
             res.send(result);
         })
-        
+
         app.get('/bloodDonor/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
@@ -194,46 +278,50 @@ async function run() {
         app.put('/cancelBloodDonor/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
+            const updateStatus = {
+                $set: {
                     status: 'canceled'
-                } }
-                const result=await donorRequ.updateOne(query,updateStatus)
-                res.send(result)
+                }
+            }
+            const result = await donorRequ.updateOne(query, updateStatus)
+            res.send(result)
         })
         app.put('/InprogressBloodDonor/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
+            const updateStatus = {
+                $set: {
                     status: 'inprogress'
-                } }
-                const result=await donorRequ.updateOne(query,updateStatus)
-                res.send(result)
+                }
+            }
+            const result = await donorRequ.updateOne(query, updateStatus)
+            res.send(result)
         })
-        app.put('/pendingBloodDonor/:id', async (req, res) => { 
+        app.put('/pendingBloodDonor/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
+            const updateStatus = {
+                $set: {
                     status: 'pending'
-                } }
-                const result=await donorRequ.updateOne(query,updateStatus)
-                res.send(result)
+                }
+            }
+            const result = await donorRequ.updateOne(query, updateStatus)
+            res.send(result)
         })
         app.put('/doneBloodDonor/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
+            const updateStatus = {
+                $set: {
                     status: 'done'
-                } }
-                const result=await donorRequ.updateOne(query,updateStatus)
-                res.send(result)
+                }
+            }
+            const result = await donorRequ.updateOne(query, updateStatus)
+            res.send(result)
         })
 
         app.post('/bloodDonor', async (req, res) => {
-            const addDonor = req.body; 
+            const addDonor = req.body;
             console.log(addDonor);
             const result = await donorRequ.insertOne(addDonor)
             res.send(result)
@@ -244,46 +332,13 @@ async function run() {
             const result = await createDonor.insertOne(addDonor)
             res.send(result)
         })
-        app.post('/blogPage', async (req, res) => {
+        app.post('/blogs', async (req, res) => {
             const addDonor = req.body;
             console.log(addDonor);
-            const result = await blogPage.insertOne(addDonor)
-            res.send(result)
-        })
-        app.get('/blogPage',  async (req, res) => {
-            console.log(req.headers);
-            const cursor = userCollection.find()
-            const result = await blogPage.toArray()
+            const result = await blog.insertOne(addDonor)
             res.send(result)
         })
 
-        app.put('/pulish/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
-                    status: 'done'
-                } }
-                const result=await blogPage.updateOne(query,updateStatus)
-                res.send(result)
-        })
-        app.put('/unpublish/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const updateStatus ={
-                $set:{
-                    status: 'done'
-                } }
-                const result=await blogPage.updateOne(query,updateStatus)
-                res.send(result)
-        })
-
-        app.delete('/blogPage/:id',  async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await blogPage.deleteOne(query)
-            res.send(result)
-        })
 
 
 
