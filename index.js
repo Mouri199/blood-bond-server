@@ -230,11 +230,11 @@ async function run() {
         app.put("/blogsUpdate/:id", async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
-            const options ={
-                upsert:true
+            const options = {
+                upsert: true
             }
             const newData = req.body;
-       
+
             const updateblog = {
                 $set: {
                     img: newData.img,
@@ -242,7 +242,7 @@ async function run() {
                     content: newData.content
                 },
             };
-            const result = await blogPublish.updateOne(filter, updateblog,options);
+            const result = await blogPublish.updateOne(filter, updateblog, options);
             res.send(result);
         });
 
@@ -286,6 +286,23 @@ async function run() {
             const query = { _id: new ObjectId(id) }
             const result = await donorRequ.findOne(query)
             res.send(result);
+        })
+
+        app.put('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const newData = req.body;
+            const updateStatus = {
+                $set: {
+                    // photo: updateStatus.photo,
+                    district: newData.district,
+                    upazila: newData.upazila,
+                    blood: newData.blood
+                }
+            }
+            console.log(updateStatus);
+            const result = await userCollection.updateOne(query, updateStatus)
+            res.send(result)
         })
 
         app.put('/cancelBloodDonor/:id', async (req, res) => {
@@ -359,19 +376,19 @@ async function run() {
         })
 
         // payment intent
-    //  app.post('/create-payment',async(req,res) =>{
-    //     const {price} = req.body;
-    //     const amount = parseInt(price*100)
+        //  app.post('/create-payment',async(req,res) =>{
+        //     const {price} = req.body;
+        //     const amount = parseInt(price*100)
 
-    //     const pamentIntent = await stripe.pamentIntents.create({
-    //         amount:amount,
-    //         currency: 'usd',
-    //         payment_method_types: ['card']
-    //     })
-    //     res.send({
-    //         clientSecret: pamentIntent.client_secret
-    //     })
-    //  })
+        //     const pamentIntent = await stripe.pamentIntents.create({
+        //         amount:amount,
+        //         currency: 'usd',
+        //         payment_method_types: ['card']
+        //     })
+        //     res.send({
+        //         clientSecret: pamentIntent.client_secret
+        //     })
+        //  })
 
 
 
