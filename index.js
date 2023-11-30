@@ -1,10 +1,11 @@
 const express = require('express')
-const app = express()
+require('dotenv').config()
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.PAYMENT_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config()
 
+const app = express()
 const port = process.env.PORT || 8000;
 
 app.use(cors())
@@ -35,6 +36,7 @@ async function run() {
         const userCollection = client.db('bloodBondDB').collection('users')
         const donorRequ = client.db('bloodBondDB').collection('bloodDonor')
         const createDonor = client.db('bloodBondDB').collection('createDonor')
+        const blogPublish = client.db('bloodBondDB').collection('blogPublish')
 
 
 
@@ -97,6 +99,11 @@ async function run() {
         })
         app.get('/upozela', async (req, res) => {
             const cursor = upozela.find()
+            const result = await cursor.toArray()
+            res.send(result)
+        })
+        app.get('/blogPublish', async (req, res) => {
+            const cursor = blogPublish.find()
             const result = await cursor.toArray()
             res.send(result)
         })
@@ -219,19 +226,23 @@ async function run() {
             res.send(result)
         })
 
+
         app.put("/blogsUpdate/:id", async (req, res) => {
             const id = req.params.id;
-            const body = req.body;
-            console.log(body);
             const filter = { _id: new ObjectId(id) };
+            const options ={
+                upsert:true
+            }
+            const newData = req.body;
+       
             const updateblog = {
                 $set: {
-                    img: body.img,
-                    title: body.title,
-                    content: body.content
+                    img: newData.img,
+                    title: newData.title,
+                    content: newData.content
                 },
             };
-            const result = await blog.updateOne(filter, updateblog);
+            const result = await blogPublish.updateOne(filter, updateblog,options);
             res.send(result);
         });
 
@@ -242,10 +253,11 @@ async function run() {
             const result = await userCollection.deleteOne(query)
             res.send(result)
         })
-        app.delete('/blogs/:id', verifyToken, verifyAdmin, async (req, res) => {
+
+        app.delete('/blogPublish/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
-            const result = await blog.deleteOne(query)
+            const result = await blogPublish.deleteOne(query)
             res.send(result)
         })
 
@@ -260,6 +272,7 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
+
 
         app.get('/blogDetails/:id', async (req, res) => {
             const id = req.params.id;
@@ -327,9 +340,15 @@ async function run() {
             res.send(result)
         })
         app.post('/createDonor', async (req, res) => {
-            const addDonor = req.body;
-            console.log(addDonor);
-            const result = await createDonor.insertOne(addDonor)
+            const addCreateDonor = req.body;
+            console.log(addCreateDonor);
+            const result = await createDonor.insertOne(addCreateDonor)
+            res.send(result)
+        })
+        app.post('/blogPublish', async (req, res) => {
+            const addBlogPublish = req.body;
+            console.log(addBlogPublish);
+            const result = await blogPublish.insertOne(addBlogPublish)
             res.send(result)
         })
         app.post('/blogs', async (req, res) => {
@@ -339,7 +358,20 @@ async function run() {
             res.send(result)
         })
 
+        // payment intent
+    //  app.post('/create-payment',async(req,res) =>{
+    //     const {price} = req.body;
+    //     const amount = parseInt(price*100)
 
+    //     const pamentIntent = await stripe.pamentIntents.create({
+    //         amount:amount,
+    //         currency: 'usd',
+    //         payment_method_types: ['card']
+    //     })
+    //     res.send({
+    //         clientSecret: pamentIntent.client_secret
+    //     })
+    //  })
 
 
 
